@@ -24,6 +24,7 @@ locals {
   default_branch         = var.default_branch == null ? lookup(var.defaults, "default_branch", "") : var.default_branch
   standard_topics        = var.topics == null ? lookup(var.defaults, "topics", []) : var.topics
   topics                 = concat(local.standard_topics, var.extra_topics)
+  vulnerability_alerts   = var.vulnerability_alerts
   template               = var.template == null ? [] : [var.template]
   issue_labels_create    = var.issue_labels_create == null ? lookup(var.defaults, "issue_labels_create", local.issue_labels_create_computed) : var.issue_labels_create
 
@@ -34,6 +35,7 @@ locals {
   gh_labels     = local.var_gh_labels == null ? lookup(var.defaults, "issue_labels_merge_with_github_labels", true) : local.var_gh_labels
 
   issue_labels_merge_with_github_labels = local.gh_labels
+  pages = var.pages == null ? [] : var.pages
 }
 
 locals {
@@ -101,9 +103,20 @@ resource "github_repository" "repository" {
   auto_init              = local.auto_init
   gitignore_template     = local.gitignore_template
   license_template       = local.license_template
-  default_branch         = local.default_branch
   archived               = var.archived
   topics                 = local.topics
+  vulnerability_alerts   = local.vulnerability_alerts
+  
+  dynamic "pages" {
+    for_each = local.pages
+    
+      content {
+        source {
+        branch = pages.value.branch
+        path   = pages.value.path
+      }
+    }
+  }
 
   dynamic "template" {
     for_each = local.template
@@ -124,17 +137,35 @@ resource "github_repository" "repository" {
   }
 }
 
+resource "github_branch" "default_branch" {
+  depends_on = [
+    github_repository.repository
+  ]
+  repository = github_repository.repository.name
+  branch     = local.default_branch
+}
+
+resource "github_branch_default" "default" {
+  depends_on = [
+    github_repository.repository,
+    github_branch.default_branch
+  ]
+  repository = github_repository.repository.name
+  branch     = github_branch.default_branch.branch
+}
+
 # ---------------------------------------------------------------------------------------------------------------------
 # Branch Protection
 # https://www.terraform.io/docs/providers/github/r/branch_protection.html
 # ---------------------------------------------------------------------------------------------------------------------
 
-resource "github_branch_protection" "branch_protection" {
+resource "github_branch_protection_v3" "branch_protection" {
   count = length(local.branch_protections)
 
   # ensure we have all members and collaborators added before applying
   # any configuration for them
   depends_on = [
+    github_branch_default.default,
     github_repository_collaborator.collaborator,
     github_team_repository.team_repository,
     github_team_repository.team_repository_by_slug

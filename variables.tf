@@ -463,3 +463,15 @@ variable "plaintext_secrets" {
 
   default = {}
 }
+
+variable "pages" {
+  description = "The repository's GitHub Pages configuration. See GitHub Pages Configuration below for details. (Default: {})"
+  type = any
+  default = []
+}
+
+variable "vulnerability_alerts" {
+  description = "(Optional) - Set to true to enable security alerts for vulnerable dependencies. Enabling requires alerts to be enabled on the owner level. (Note for importing: GitHub enables the alerts on public repos but disables them on private repos by default.)"
+  type = bool
+  default = null
+}
