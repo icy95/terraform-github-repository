@@ -2,10 +2,4 @@
 # SET TERRAFORM AND PROVIDER REQUIREMENTS FOR RUNNING THIS MODULE
 # ---------------------------------------------------------------------------------------------------------------------
 
-terraform {
-  required_version = ">= 0.12.20"
-
-  required_providers {
-    github = "4.6.0"
-  }
-}
+provider "github"{}
